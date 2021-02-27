@@ -43,7 +43,7 @@ There are some notifications implemented, when reaching certain values of temper
 
 ## Installation
 
-Download from [here](https://github.com/fermendi/pc_status/archive/master.zip) or using git clone:
+Download from [here](https://github.com/fermendi/pc_status/archive/main.zip) or using git clone:
 
 ```
 $ https://github.com/fermendi/pc_status.git
