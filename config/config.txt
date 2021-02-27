@@ -1,0 +1,11 @@
+{
+"PATH_NOTIF_ICON": "~/pc_status/gif/monitor_freepic.png",
+"PATH_NOTIF_SOUND": "~/pc_status/gif/sound.wav",
+"HIGH_USAGE_CPU": 90,
+"HIGH_USAGE_MEM": 90,
+"DISCHARGING_BATTERY": 20,
+"NOTIFICATION_BATTERY": "yes",
+"NOTIFICATION_MEMORY": "yes",
+"NOTIFICATION_CPU": "yes",
+"NOTIFICATION_TEMPERATURE": "yes"
+}
