@@ -8,14 +8,14 @@ import psutil
 import platform
 
 from common import Common
-from read_parameters import ReadParametersFile
 from datetime import datetime
 
 
 class System:
-    def __init__(self):
+    def __init__(self, params_obj):
         self.uname = platform.uname()
         self.bt = datetime.fromtimestamp(psutil.boot_time())
+        self.params_obj = params_obj
 
     def print_info(self):
         print(Common.SEPARATOR)
@@ -29,9 +29,12 @@ class System:
 
     def print_boot_time(self):
         print(Common.SEPARATOR)
-        print(f'Boot Time: {self.bt.day}/{self.bt.month}/{self.bt.year} ' \
-                         f'{self.bt.hour}:{self.bt.minute}:{self.bt.second}')
+        print(f'Boot Time: {self.bt.day:02d}/{self.bt.month:02d}/{self.bt.year} ' \
+                         f'{self.bt.hour:02d}:{self.bt.minute:02d}:{self.bt.second:02d}')
         print(Common.SEPARATOR)
+
+    def set_parameters(self, params_obj):
+        self.params_obj = params_obj
 
     def run(self):
         self.print_info()
@@ -39,10 +42,10 @@ class System:
 
 
 class Status:
-    def __init__(self):
+    def __init__(self, params_obj):
         self.uname = platform.uname()
         self.cpufreq = psutil.cpu_freq()
-        self.params_file = ReadParametersFile()
+        self.params_obj = params_obj
 
     def print_info(self):
         print(Common.SEPARATOR)
@@ -61,28 +64,39 @@ class Status:
         usage_msg = Common.generate_message(dev_usage_list, '%')
         return usage_msg
 
-    def get_cpu_usage(self):
+    def get_cpu_usage_list(self):
         return [('CPU', psutil.cpu_percent())]
 
-    def get_cores_usage(self):
+    def get_cpu_usage(self):
+        return psutil.cpu_percent()
+
+    def get_cores_usage_list(self):
         dev_usage_list = []
         for i, percentage in enumerate(psutil.cpu_percent(percpu=True, interval=1)):
             dev_usage_list.append((f'Core{i}', percentage))
         return dev_usage_list
 
     def get_total_usage(self):
-        return self.get_cpu_usage() + self.get_cores_usage()
+        return self.get_cpu_usage_list() + self.get_cores_usage_list()
 
     def alarm(self, is_sound):
-        Common.notification_send('CPU', f'The CPU usage has reached '
-                                        f'{self.get_usage_msg()}!', is_sound)
+        Common.notification_send('CPU',
+                                 f'The CPU usage has reached {self.get_usage_msg()}!',
+                                 self.params_obj.config_params,
+                                 is_sound)
 
     def is_cpu_high_usage(self):
         usage_list = self.get_total_usage()
         for device in usage_list:
-            if device[1] >= self.params_file.params['HIGH_USAGE_CPU']:
+            if device[1] >= self.params_obj.config_params['HIGH_USAGE_CPU']:
                 return True
         return False
+
+    def set_parameters(self, params_obj):
+        self.params_obj = params_obj
+
+    def is_notification_cpu(self):
+        return self.params_obj.config_params['NOTIFICATION_CPU'] == 'yes'
 
     def run(self):
         self.print_info()
@@ -90,10 +104,10 @@ class Status:
 
 
 class Memory:
-    def __init__(self):
+    def __init__(self, params_obj):
         self.svmem = psutil.virtual_memory()
         self.swap = psutil.swap_memory()
-        self.params_file = ReadParametersFile()
+        self.params_obj = params_obj
 
         self.PERCENTAGE_MEM_SWAP = f'Memory Usage: {self.get_memory_usage()}% (Swap: {self.get_swap_usage()}%)'
 
@@ -117,7 +131,7 @@ class Memory:
         print(Common.SEPARATOR)
 
     def is_high_usage(self):
-        if self.get_memory_usage() >= self.params_file.params['HIGH_USAGE_MEM']:
+        if self.get_memory_usage() >= self.params_obj.config_params['HIGH_USAGE_MEM']:
             return True
         else:
             return False
@@ -132,7 +146,16 @@ class Memory:
         return f'Memory: {self.get_memory_usage()}% (swap: {self.get_swap_usage()}%)'
 
     def alarm(self, is_sound):
-        Common.notification_send('Memory', f'The memory usage has reached {self.get_memory_usage()}%!', is_sound)
+        Common.notification_send('Memory',
+                                 f'The memory usage has reached {self.get_memory_usage()}%!',
+                                 self.params_obj.config_params,
+                                 is_sound)
+
+    def set_parameters(self, params_obj):
+        self.params_obj = params_obj
+
+    def is_notification_memory(self):
+        return self.params_obj.config_params['NOTIFICATION_MEMORY'] == 'yes'
 
     def run(self):
         self.virtual_mem()
@@ -140,10 +163,11 @@ class Memory:
 
 
 class Disk:
-    def __init__(self):
+    def __init__(self, params_obj):
         self.disk_partition_list = []
         self.partitions = psutil.disk_partitions()
         self.disk_io = psutil.disk_io_counters()
+        self.params_obj = params_obj
 
     def info(self):
         self.read_since_boot = f'Total read since boot: {Common.convert_units(self.disk_io.read_bytes)}'
@@ -171,15 +195,19 @@ class Disk:
         print(self.write_since_boot)
         print(Common.SEPARATOR)
 
+    def set_parameters(self, params_obj):
+        self.params_obj = params_obj
+
     def run(self):
         self.info()
 
 
 class Network:
-    def __init__(self):
+    def __init__(self, params_obj):
         self.interfaces = []
         self.if_addrs = psutil.net_if_addrs()
         self.net_io = psutil.net_io_counters()
+        self.params_obj = params_obj
 
     def info(self):
         self.bytes_received = f'Total bytes received: {Common.convert_units(self.net_io.bytes_recv)}'
@@ -204,14 +232,17 @@ class Network:
         print(self.bytes_received)
         print(Common.SEPARATOR)
 
+    def set_parameters(self, params_obj):
+        self.params_obj = params_obj
+
     def run(self):
         self.info()
 
 
 class Battery:
-    def __init__(self):
+    def __init__(self, params_obj):
         self.status = psutil.sensors_battery()
-        self.params_file = ReadParametersFile()
+        self.params_obj = params_obj
 
     def info(self):
         print(Common.SEPARATOR)
@@ -222,27 +253,47 @@ class Battery:
         return not self.status.power_plugged
 
     def is_discharging(self):
-        return self.params_file.params['DISCHARGING_BATTERY'] <= self.get_percentage()
+        return self.is_below_threshold() and self.is_diff_charge_negative()
+
+    def is_below_threshold(self):
+        return self.params_obj.config_params['DISCHARGING_BATTERY'] <= self.get_percentage()
+
+    def is_diff_charge_negative(self):
+        return Common.is_first_great_second(self.params_obj.stats_params['BATTERY_STATUS'],
+                                            self.get_percentage())
 
     def get_percentage(self):
-        return self.status.percent
+        return round(self.status.percent, 2)
 
     def get_percentage_msg(self):
         return f'Battery percentage: {self.get_percentage():.2f}%'
 
     def alarm_unplugged(self, is_sound):
-        Common.notification_send('Battery', f'The batery is not pluggged! ({self.get_percentage():0.2f}%)', is_sound)
+        Common.notification_send('Battery',
+                                 f'The batery is not pluggged! ({self.get_percentage():0.2f}%)',
+                                 self.params_obj.config_params,
+                                 is_sound)
 
     def alarm_discharging(self, is_sound):
-        Common.notification_send('Battery', f'The batery is discharging! ({self.get_percentage():0.2f}%)', is_sound)
+        Common.notification_send('Battery',
+                                 f'The batery is discharging! ({self.get_percentage():0.2f}%)',
+                                 self.params_obj.config_params,
+                                 is_sound)
+
+    def is_notification_battery(self):
+        return self.params_obj.config_params['NOTIFICATION_BATTERY'] == 'yes'
+
+    def set_parameters(self, params_obj):
+        self.params_obj = params_obj
 
     def run(self):
         self.info()
 
 
 class Temperature:
-    def __init__(self):
+    def __init__(self, params_obj):
         self.status = psutil.sensors_temperatures()
+        self.params_obj = params_obj
 
     def info(self):
         temperatures_current = self.get_temperature_msg('current')
@@ -296,14 +347,17 @@ class Temperature:
     def get_temperature_msg(self, temp_type):
         temp_list = self.get_temperatures_list()
         temp = self.pick_temperatures(temp_list, temp_type)
-        temp_msg = Common.generate_message(temp, 'ª')
+        temp_msg = Common.generate_message(temp, 'º')
         return temp_msg
 
     def alarm(self, is_sound):
         temp_list = self.get_temperatures_list()
         status = self.get_status(temp_list)
         temp_msg = self.get_temperature_msg('current')
-        Common.notification_send('Temperature', f'Temperature is {status}! ({temp_msg})', is_sound)
+        Common.notification_send('Temperature',
+                                 f'Temperature is {status}! ({temp_msg})',
+                                 self.params_obj.config_params,
+                                 is_sound)
 
     def is_high_temperature(self):
         return self.get_status(self.get_temperatures_list()) != 'OK'
@@ -315,15 +369,15 @@ class Temperature:
             else:
                 return device_temperatures.label
 
+    def set_parameters(self, params_obj):
+        self.params_obj = params_obj
+
+    def is_notification_temperature(self):
+        return self.params_obj.config_params['NOTIFICATION_TEMPERATURE'] == 'yes'
+
     def run(self):
         self.info()
 
 
 if __name__ == '__main__':
-    System().run()
-    Status().run()
-    Memory().run()
-    Disk().run()
-    Network().run()
-    Battery().run()
-    Temperature().run()
+    pass

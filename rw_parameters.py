@@ -1,13 +1,12 @@
 #
-# @file <read_parameters.py>
+# @file <rw_parameters.py>
 #
 # @author Fernando Mendiburu - <fernando.mendiburu@ee.ufcg.edu.br>
 #
 
 import argparse
-import json
-import os
-import sys
+
+from common import Common
 
 
 class ReadParametersCMD:
@@ -50,49 +49,18 @@ class ReadParametersCMD:
         return self.args.notifications == 'y'
 
 
-class ReadParametersFile:
+class ReadParametersFiles:
     def __init__(self):
-        self.file_params = os.path.expanduser('~') + '/pc_status/config/config.txt'
         self.update_parameters()
 
-    def verify_paths(self, params):
-        for (key,value) in params.items():
-            try:
-                if value[0] == '~':
-                    params[key] = os.path.expanduser('~') + value[1:]
-            except:
-                pass
-        return params
-
     def update_parameters(self):
-        self.params = {}
-        try:
-            with open(self.file_params, 'r') as json_file:
-                self.params = self.load_params(json_file)
-                self.params = self.verify_paths(self.params)
-        except FileNotFoundError:
-            print(f'ERROR: Parameters file {self.file_params} not found!\nExit program!')
-            sys.exit()
+        self.config_params = Common.read_params(Common.CONFIG_FILE)
+        self.stats_params = Common.read_params(Common.STATS_FILE)
 
-    def load_params(self, file):
-        try:
-            params = json.load(file)
-            return params
-        except:
-            print(f'ERROR: Problem in the data format of file {file}!\nExit program!')
-            sys.exit()
 
-    def is_notification_battery(self):
-        return self.params['NOTIFICATION_BATTERY'] == 'yes'
-
-    def is_notification_cpu(self):
-        return self.params['NOTIFICATION_CPU'] == 'yes'
-
-    def is_notification_memory(self):
-        return self.params['NOTIFICATION_MEMORY'] == 'yes'
-
-    def is_notification_temperature(self):
-        return self.params['NOTIFICATION_TEMPERATURE'] == 'yes'
+class WriteParametersStatFile:
+    def write_parameters(self, dict_stat):
+        Common.write_dict_file(Common.STATS_FILE, dict_stat)
 
 
 #-------------------------------------------------------------------------------------------

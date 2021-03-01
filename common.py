@@ -5,12 +5,16 @@
 #
 
 import sys
+import os
+import json
 
 from notifypy import Notify
-from read_parameters import ReadParametersFile
 
 
 class Common:
+    STATS_FILE = os.path.expanduser('~') + '/pc_status/config/stats_output.txt'
+    CONFIG_FILE = os.path.expanduser('~') + '/pc_status/config/config.txt'
+
     SEPARATOR = "-" * 80
     UNITS = ["", "K", "M", "G", "T", "P"]
     BYTES = 1024
@@ -46,15 +50,53 @@ class Common:
         return message
 
     @staticmethod
-    def notification_send(title, message, is_sound):
-        params_file = ReadParametersFile()
+    def notification_send(title, message, config_dict, b_sound):
         notification = Notify()
         notification.title = title
         notification.message = message
-        notification.icon = params_file.params['PATH_NOTIF_ICON']
-        if is_sound:
-            notification.audio = params_file.params['PATH_NOTIF_SOUND']
+        notification.icon = config_dict['PATH_NOTIF_ICON']
+        if b_sound:
+            notification.audio = config_dict['PATH_NOTIF_SOUND']
         notification.send()
+
+    @staticmethod
+    def write_params(file, data_dict):
+        with open(file, 'w') as fp:
+            json.dump(data_dict, fp)
+
+    @staticmethod
+    def read_params(file):
+        try:
+            with open(file, 'r') as fp:
+                dict_params = json.load(fp)
+                dict_params = Common.verify_paths(dict_params)
+                return dict_params
+        except FileNotFoundError:
+            print(f'ERROR: File {file} not found!\nExit program!')
+            sys.exit()
+        except ValueError:
+            print(f'ERROR: Probably a problem in the data format of file {fp.name}!\nExit program!')
+
+    @staticmethod
+    def verify_paths(params):
+        for (key,value) in params.items():
+            try:
+                if value[0] == '~':
+                    params[key] = os.path.expanduser('~') + value[1:]
+            except:
+                pass
+        return params
+
+    @staticmethod
+    def write_dict_file(file, dict):
+        Common.write_params(file, dict)
+
+    @staticmethod
+    def is_first_great_second(first, second):
+        if first > second:
+            return True
+        else:
+            return False
 
 
 if __name__ == '__main__':
