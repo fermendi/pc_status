@@ -52,8 +52,8 @@ class ReadParametersCMD:
 
 class ReadParametersFile:
     def __init__(self):
-        # load parameters:
-        self.params = self.get_params_from_file()
+        self.file_params = os.path.expanduser('~') + '/pc_status/config/config.txt'
+        self.update_parameters()
 
     def verify_paths(self, params):
         for (key,value) in params.items():
@@ -64,15 +64,14 @@ class ReadParametersFile:
                 pass
         return params
 
-    def get_params_from_file(self):
-        params = {}
+    def update_parameters(self):
+        self.params = {}
         try:
-            with open(os.path.expanduser('~') + '/pc_status/config/config.txt', 'r') as json_file:
-                params = self.load_params(json_file)
-                params = self.verify_paths(params)
-                return params
+            with open(self.file_params, 'r') as json_file:
+                self.params = self.load_params(json_file)
+                self.params = self.verify_paths(self.params)
         except FileNotFoundError:
-            print("ERROR: Parameters file 'config.txt' not found!\nExit program!")
+            print(f'ERROR: Parameters file {self.file_params} not found!\nExit program!')
             sys.exit()
 
     def load_params(self, file):
@@ -80,7 +79,7 @@ class ReadParametersFile:
             params = json.load(file)
             return params
         except:
-            print("ERROR: Problem in the data format of file 'config.txt'!\nExit program!")
+            print(f'ERROR: Problem in the data format of file {file}!\nExit program!')
             sys.exit()
 
     def is_notification_battery(self):
@@ -102,4 +101,3 @@ class ReadParametersFile:
 
 if __name__ == '__main__':
     pass
-
