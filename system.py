@@ -41,11 +41,16 @@ class System:
         self.print_boot_time()
 
 
-class Status:
+class CPU:
     def __init__(self, params_obj):
         self.uname = platform.uname()
         self.cpufreq = psutil.cpu_freq()
         self.params_obj = params_obj
+        self.update()
+
+    def update(self):
+        self.cpu_usage = psutil.cpu_percent()
+        self.cores_usage = psutil.cpu_percent(percpu=True, interval=1)
 
     def print_info(self):
         print(Common.SEPARATOR)
@@ -65,14 +70,14 @@ class Status:
         return usage_msg
 
     def get_cpu_usage_list(self):
-        return [('CPU', psutil.cpu_percent())]
+        return [('CPU', self.cpu_usage)]
 
     def get_cpu_usage(self):
-        return psutil.cpu_percent()
+        return self.cpu_usage
 
     def get_cores_usage_list(self):
         dev_usage_list = []
-        for i, percentage in enumerate(psutil.cpu_percent(percpu=True, interval=1)):
+        for i, percentage in enumerate(self.cores_usage):
             dev_usage_list.append((f'Core{i}', percentage))
         return dev_usage_list
 
@@ -108,8 +113,16 @@ class Memory:
         self.svmem = psutil.virtual_memory()
         self.swap = psutil.swap_memory()
         self.params_obj = params_obj
-
+        self.update()
         self.PERCENTAGE_MEM_SWAP = f'Memory Usage: {self.get_memory_usage()}% (Swap: {self.get_swap_usage()}%)'
+
+    def update(self):
+        self.available_memory = self.svmem.total
+        self.used_memory = self.svmem.used
+        self.memory_percent = self.svmem.percent
+        self.available_memory_swap = self.swap.free
+        self.used_memory_swap = self.swap.used
+        self.memory_percent_swap = self.swap.percent
 
     def get_usage_msg(self):
         return f'Memory Usage: {self.get_memory_usage()}% (Swap: {self.get_swap_usage()}%)'
@@ -117,17 +130,17 @@ class Memory:
     def virtual_mem(self):
         print(Common.SEPARATOR)
         print(f'Memory: {Common.convert_units(self.svmem.total)}')
-        print(f'Available Memory: {Common.convert_units(self.svmem.available)}')
-        print(f'Used Memory: {Common.convert_units(self.svmem.used)}')
-        print(f'Memory Usage: {self.svmem.percent}%')
+        print(f'Available Memory: {Common.convert_units(self.available_memory)}')
+        print(f'Used Memory: {Common.convert_units(self.used_memory)}')
+        print(f'Memory Usage: {self.memory_percent}%')
         print(Common.SEPARATOR)
 
     def swap_mem(self):
         print(Common.SEPARATOR)
         print(f'Swap Memory: {Common.convert_units(self.swap.total)}')
-        print(f'Free Swap Memory: {Common.convert_units(self.swap.free)}')
-        print(f'Used Swap Memory: {Common.convert_units(self.swap.used)}')
-        print(f'Swap Memory Usage: {self.swap.percent}%')
+        print(f'Free Swap Memory: {Common.convert_units(self.available_memory_swap)}')
+        print(f'Used Swap Memory: {Common.convert_units(self.used_memory_swap)}')
+        print(f'Swap Memory Usage: {self.memory_percent_swap}%')
         print(Common.SEPARATOR)
 
     def is_high_usage(self):
@@ -137,10 +150,10 @@ class Memory:
             return False
 
     def get_memory_usage(self):
-        return self.svmem.percent
+        return self.memory_percent
 
     def get_swap_usage(self):
-        return self.swap.percent
+        return self.memory_percent_swap
 
     def get_mem_swap_msg(self):
         return f'Memory: {self.get_memory_usage()}% (swap: {self.get_swap_usage()}%)'
@@ -165,9 +178,12 @@ class Memory:
 class Disk:
     def __init__(self, params_obj):
         self.disk_partition_list = []
+        self.params_obj = params_obj
+        self.update()
+
+    def update(self):
         self.partitions = psutil.disk_partitions()
         self.disk_io = psutil.disk_io_counters()
-        self.params_obj = params_obj
 
     def info(self):
         self.read_since_boot = f'Total read since boot: {Common.convert_units(self.disk_io.read_bytes)}'
@@ -205,9 +221,12 @@ class Disk:
 class Network:
     def __init__(self, params_obj):
         self.interfaces = []
+        self.params_obj = params_obj
+        self.update()
+
+    def update(self):
         self.if_addrs = psutil.net_if_addrs()
         self.net_io = psutil.net_io_counters()
-        self.params_obj = params_obj
 
     def info(self):
         self.bytes_received = f'Total bytes received: {Common.convert_units(self.net_io.bytes_recv)}'
@@ -243,6 +262,11 @@ class Battery:
     def __init__(self, params_obj):
         self.status = psutil.sensors_battery()
         self.params_obj = params_obj
+        self.update()
+
+    def update(self):
+        self.power_unplugged = self.status.power_plugged
+        self.battery_percent = self.status.percent
 
     def info(self):
         print(Common.SEPARATOR)
@@ -250,7 +274,7 @@ class Battery:
         print(Common.SEPARATOR)
 
     def is_unplugged(self):
-        return not self.status.power_plugged
+        return not self.power_unplugged
 
     def is_discharging(self):
         return self.is_below_threshold() and self.is_diff_charge_negative()
@@ -263,7 +287,7 @@ class Battery:
                                             self.get_percentage())
 
     def get_percentage(self):
-        return round(self.status.percent, 2)
+        return round(self.battery_percent, 2)
 
     def get_percentage_msg(self):
         return f'Battery percentage: {self.get_percentage():.2f}%'
@@ -294,6 +318,10 @@ class Temperature:
     def __init__(self, params_obj):
         self.status = psutil.sensors_temperatures()
         self.params_obj = params_obj
+        self.update()
+
+    def update(self):
+        self.key_dev = self.status.items()
 
     def info(self):
         temperatures_current = self.get_temperature_msg('current')
@@ -307,7 +335,7 @@ class Temperature:
 
     def get_temperatures_list(self):
         temp_list = []
-        for (key,devices) in self.status.items():
+        for (key,devices) in self.key_dev:
             for device_temperatures in devices:
                 device = self.choose_device(device_temperatures)
                 if device is not None:
