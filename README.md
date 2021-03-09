@@ -46,7 +46,7 @@ There are some notifications implemented, when reaching certain values of temper
 Download from [here](https://github.com/fermendi/pc_status/archive/main.zip) or using git clone:
 
 ```
-$ https://github.com/fermendi/pc_status.git
+$ git clone https://github.com/fermendi/pc_status.git
 ```
 
 Install Python 3.6.9 (Jan 26 2021) or later (In Linux is already installed in /usr/bin/python3 or /usr/bin/python3.6).
