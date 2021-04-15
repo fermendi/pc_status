@@ -323,13 +323,6 @@ class Battery:
 
 
 class Temperature:
-    class TempValues:
-        def __init__(self, label, temp_current, temp_high, temp_critical):
-            self.label = label
-            self.current = temp_current
-            self.high = temp_high
-            self.critical = temp_critical
-
     def __init__(self, params_obj):
         self.params_obj = params_obj
         self.temp = []
