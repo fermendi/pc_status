@@ -71,7 +71,7 @@ class CPU:
         return usage_msg
 
     def get_cpu_usage_list(self):
-        return [('CPU', self.cpu_usage)]
+        return [('CPU total', self.cpu_usage)]
 
     def get_cpu_usage(self):
         return self.cpu_usage
@@ -351,9 +351,14 @@ class Temperature:
 
     def info(self):
         print(Common.SEPARATOR)
-        for value in self.temp_v.values():
-            print(f'{value.label}: Current temperature: {value.current}º')
+        print(self.get_temperature_string())
         print(Common.SEPARATOR)
+
+    def get_temperature_string(self):
+        temp_string = ''
+        for value in self.temp_v.values():
+            temp_string += f'{value.label}: {value.current}º\n'
+        return Common.fix_string(temp_string)
 
     def is_notification_temperature(self):
         return self.params_obj.config_params['NOTIFICATION_TEMPERATURE'] == 'yes'

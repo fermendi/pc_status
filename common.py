@@ -39,7 +39,7 @@ class Common:
 
     @staticmethod
     def fix_string(string):
-        return string[0:-2]
+        return string[0:-1]
 
     @staticmethod
     def generate_message(list_dev_value, unit):

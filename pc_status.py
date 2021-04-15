@@ -45,7 +45,9 @@ if __name__ == '__main__':
             elif parser.is_status():
                 print(Common.SEPARATOR)
                 print(sensor.cpu.get_usage_msg())
-                print(sensor.temperature.get_temperature_msg())
+                print(Common.SEPARATOR)
+                print(sensor.temperature.get_temperature_string())
+                print(Common.SEPARATOR)
                 print(sensor.memory.get_mem_swap_msg())
                 print(sensor.battery.get_percentage_msg())
                 print(Common.SEPARATOR)
