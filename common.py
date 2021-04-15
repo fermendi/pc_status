@@ -45,7 +45,7 @@ class Common:
     def generate_message(list_dev_value, unit):
         message = ''
         for dev_value in list_dev_value:
-            message += f'{dev_value[0]}: {dev_value[1]}{unit}, '
+            message += f'{dev_value[0]}: {dev_value[1]}{unit}\n'
         message = Common.fix_string(message)
         return message
 
@@ -79,7 +79,7 @@ class Common:
 
     @staticmethod
     def verify_paths(params):
-        for (key,value) in params.items():
+        for (key, value) in params.items():
             try:
                 if value[0] == '~':
                     params[key] = os.path.expanduser('~') + value[1:]
@@ -90,13 +90,6 @@ class Common:
     @staticmethod
     def write_dict_file(file, dict):
         Common.write_params(file, dict)
-
-    @staticmethod
-    def is_first_great_second(first, second):
-        if first > second:
-            return True
-        else:
-            return False
 
 
 if __name__ == '__main__':

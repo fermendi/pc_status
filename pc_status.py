@@ -8,7 +8,6 @@ from sensor import Sensor
 from rw_parameters import ReadParametersCMD, ReadParametersFiles, WriteParametersStatFile
 from common import Common
 
-
 if __name__ == '__main__':
 
     try:
@@ -16,7 +15,6 @@ if __name__ == '__main__':
         parser = ReadParametersCMD()
         params_obj = ReadParametersFiles()
         write_obj = WriteParametersStatFile()
-        args = parser.get_params()
 
         sensor = Sensor(params_obj)
 
@@ -30,7 +28,7 @@ if __name__ == '__main__':
             sensor.set_parameters(params_obj)
 
             if parser.is_notification():
-                if sensor.battery.is_discharging() and sensor.battery.is_notification_battery():
+                if sensor.battery.is_discharging_below_threshold() and sensor.battery.is_notification_battery():
                     sensor.battery.alarm_discharging(parser.is_sound())
                 if sensor.memory.is_high_usage() and sensor.memory.is_notification_memory():
                     sensor.memory.alarm(parser.is_sound())
@@ -47,7 +45,7 @@ if __name__ == '__main__':
             elif parser.is_status():
                 print(Common.SEPARATOR)
                 print(sensor.cpu.get_usage_msg())
-                print(sensor.temperature.get_temperature_msg('current'))
+                print(sensor.temperature.get_temperature_msg())
                 print(sensor.memory.get_mem_swap_msg())
                 print(sensor.battery.get_percentage_msg())
                 print(Common.SEPARATOR)
@@ -59,7 +57,7 @@ if __name__ == '__main__':
         dict_stats_params = {"BATTERY_STATUS": sensor.battery.get_percentage(),
                              "CPU_STATUS": sensor.cpu.get_cpu_usage(),
                              "MEMORY_STATUS": sensor.memory.get_memory_usage(),
-                            }
+                             }
 
         write_obj.write_parameters(dict_stats_params)
 

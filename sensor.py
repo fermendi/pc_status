@@ -44,7 +44,5 @@ class Sensor:
         self.temperature.run()
 
 
-
-
 if __name__ == '__main__':
     pass

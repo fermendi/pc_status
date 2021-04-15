@@ -29,8 +29,8 @@ class System:
 
     def print_boot_time(self):
         print(Common.SEPARATOR)
-        print(f'Boot Time: {self.bt.day:02d}/{self.bt.month:02d}/{self.bt.year} ' \
-                         f'{self.bt.hour:02d}:{self.bt.minute:02d}:{self.bt.second:02d}')
+        print(f'Boot Time: {self.bt.day:02d}/{self.bt.month:02d}/{self.bt.year} '
+              f'{self.bt.hour:02d}:{self.bt.minute:02d}:{self.bt.second:02d}')
         print(Common.SEPARATOR)
 
     def set_parameters(self, params_obj):
@@ -46,6 +46,7 @@ class CPU:
         self.uname = platform.uname()
         self.cpufreq = psutil.cpu_freq()
         self.params_obj = params_obj
+        self.device = None
         self.update()
 
     def update(self):
@@ -78,7 +79,7 @@ class CPU:
     def get_cores_usage_list(self):
         dev_usage_list = []
         for i, percentage in enumerate(self.cores_usage):
-            dev_usage_list.append((f'Core{i}', percentage))
+            dev_usage_list.append((f'CPU{i}', percentage))
         return dev_usage_list
 
     def get_total_usage(self):
@@ -86,15 +87,17 @@ class CPU:
 
     def alarm(self, is_sound):
         Common.notification_send('CPU',
-                                 f'The CPU usage has reached {self.get_usage_msg()}!',
+                                 f'The CPU usage has reached! ({Common.generate_message(self.device,"%")})',
                                  self.params_obj.config_params,
                                  is_sound)
 
     def is_cpu_high_usage(self):
         usage_list = self.get_total_usage()
         for device in usage_list:
+            self.device = [[device[0], device[1]]]
             if device[1] >= self.params_obj.config_params['HIGH_USAGE_CPU']:
                 return True
+        self.device = ''
         return False
 
     def set_parameters(self, params_obj):
@@ -271,20 +274,22 @@ class Battery:
     def info(self):
         print(Common.SEPARATOR)
         print(self.get_percentage_msg())
+        print(self.get_unplugged_msg())
         print(Common.SEPARATOR)
 
     def is_unplugged(self):
         return not self.power_unplugged
 
-    def is_discharging(self):
-        return self.is_below_threshold() and self.is_diff_charge_negative()
+    def is_discharging_below_threshold(self):
+        # is_unplugged() method fails in some PCs with damage battery
+        # return self.is_below_threshold() and self.is_unplugged()
+        return self.is_below_threshold() and self.is_discharge_higher_delta()
 
     def is_below_threshold(self):
         return self.params_obj.config_params['DISCHARGING_BATTERY'] <= self.get_percentage()
 
-    def is_diff_charge_negative(self):
-        return Common.is_first_great_second(self.params_obj.stats_params['BATTERY_STATUS'],
-                                            self.get_percentage())
+    def is_discharge_higher_delta(self):
+        return self.params_obj.stats_params['BATTERY_STATUS'] - self.get_percentage() > self.params_obj.config_params['DELTA_BATTERY']
 
     def get_percentage(self):
         return round(self.battery_percent, 2)
@@ -292,15 +297,18 @@ class Battery:
     def get_percentage_msg(self):
         return f'Battery percentage: {self.get_percentage():.2f}%'
 
+    def get_unplugged_msg(self):
+        return f'Unplugged: {self.is_unplugged()}'
+
     def alarm_unplugged(self, is_sound):
         Common.notification_send('Battery',
-                                 f'The batery is not pluggged! ({self.get_percentage():0.2f}%)',
+                                 f'The battery is not pluggged! ({self.get_percentage():0.2f}%)',
                                  self.params_obj.config_params,
                                  is_sound)
 
     def alarm_discharging(self, is_sound):
         Common.notification_send('Battery',
-                                 f'The batery is discharging! ({self.get_percentage():0.2f}%)',
+                                 f'The battery is discharging! ({self.get_percentage():0.2f}%)',
                                  self.params_obj.config_params,
                                  is_sound)
 
@@ -315,93 +323,75 @@ class Battery:
 
 
 class Temperature:
+    class TempValues:
+        def __init__(self, label, temp_current, temp_high, temp_critical):
+            self.label = label
+            self.current = temp_current
+            self.high = temp_high
+            self.critical = temp_critical
+
     def __init__(self, params_obj):
-        self.status = psutil.sensors_temperatures()
         self.params_obj = params_obj
+        self.temp = []
+        self.temp_v = {}
+        self.device = None
         self.update()
 
     def update(self):
-        self.key_dev = self.status.items()
+        self.temp = psutil.sensors_temperatures()
+        self.set_temperatures()
+
+    def set_temperatures(self):
+        for key in self.temp:
+            for shwtemp in self.temp[key]:
+                if self.is_valid_temperature(shwtemp):
+                    self.temp_v[shwtemp.label] = shwtemp
+
+    @staticmethod
+    def is_valid_temperature(shwtemp):
+        try:
+            b_is_valid = shwtemp.label != '' and shwtemp.critical >= shwtemp.high \
+                         and shwtemp.current is not None and shwtemp.high is not None and shwtemp.critical is not None
+            return b_is_valid
+        except TypeError:
+            return False
 
     def info(self):
-        temperatures_current = self.get_temperature_msg('current')
-        temperatures_high = self.get_temperature_msg('high')
-        temperatures_critical = self.get_temperature_msg('critical')
         print(Common.SEPARATOR)
-        print(f'Temp Current:  {temperatures_current}')
-        print(f'Temp High:     {temperatures_high}')
-        print(f'Temp Critical: {temperatures_critical}')
+        for value in self.temp_v.values():
+            print(f'{value.label}: Current temperature: {value.current}º')
         print(Common.SEPARATOR)
 
-    def get_temperatures_list(self):
-        temp_list = []
-        for (key,devices) in self.key_dev:
-            for device_temperatures in devices:
-                device = self.choose_device(device_temperatures)
-                if device is not None:
-                    temp_list.append((device, device_temperatures))
-        return temp_list
+    def is_notification_temperature(self):
+        return self.params_obj.config_params['NOTIFICATION_TEMPERATURE'] == 'yes'
 
-    def pick_temperatures(self, temp_list, temp_type):
-        i = 0
-        temp = []
-        for (dev,temperatures) in temp_list:
-            if temperatures.current > 0:
-                if dev.find('Core') != -1:
-                    if temp_type == 'current':
-                        temp.append((f'Core{i}', temperatures.current))
-                    elif temp_type == 'high':
-                        temp.append((f'Core{i}', temperatures.high))
-                    elif temp_type == 'critical':
-                        temp.append((f'Core{i}', temperatures.critical))
-                    i += 1
-                else:
-                    if temp_type == 'current':
-                        temp.append((f'Core{i}', temperatures.current))
-                    elif temp_type == 'high':
-                        temp.append((f'Core{i}', temperatures.high))
-                    elif temp_type == 'critical':
-                        temp.append((f'Core{i}', temperatures.critical))
-        return temp
+    def is_high_temperature(self):
+        return self.get_status() != 'OK'
 
-    def get_status(self, temp_list):
-        for device in temp_list:
-            if device[1].current >= device[1].critical:
+    def get_status(self):
+        for device in self.temp_v.values():
+            self.device = [[device.label, device.current]]
+            if device.current >= device.critical:
                 return 'CRITICAL'
-            elif device[1].current >= device[1].high:
-                return 'HIGH'
+            elif device.current >= device.high:
+                return 'HIGH', device.label
+        self.device = ''
         return 'OK'
 
-    def get_temperature_msg(self, temp_type):
-        temp_list = self.get_temperatures_list()
-        temp = self.pick_temperatures(temp_list, temp_type)
-        temp_msg = Common.generate_message(temp, 'º')
+    def get_temperature_msg(self):
+        temp_msg = Common.generate_message(self.device, 'º')
         return temp_msg
 
     def alarm(self, is_sound):
-        temp_list = self.get_temperatures_list()
-        status = self.get_status(temp_list)
-        temp_msg = self.get_temperature_msg('current')
+        status = self.get_status()
+        temp_msg = self.get_temperature_msg()
         Common.notification_send('Temperature',
                                  f'Temperature is {status}! ({temp_msg})',
                                  self.params_obj.config_params,
                                  is_sound)
 
-    def is_high_temperature(self):
-        return self.get_status(self.get_temperatures_list()) != 'OK'
-
-    def choose_device(self, device_temperatures):
-        if not device_temperatures.current == 0:
-            if device_temperatures.label == '':
-                return 'CPU'
-            else:
-                return device_temperatures.label
-
     def set_parameters(self, params_obj):
         self.params_obj = params_obj
-
-    def is_notification_temperature(self):
-        return self.params_obj.config_params['NOTIFICATION_TEMPERATURE'] == 'yes'
 
     def run(self):
         self.info()
