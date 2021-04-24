@@ -193,19 +193,20 @@ class Disk:
         self.write_since_boot = f'Total write since boot: {Common.convert_units(self.disk_io.write_bytes)}'
 
         for partition in self.partitions:
-            self.disk_partition_list.append(f'Device: {partition.device}')
-            self.disk_partition_list.append(f'\tMountpoint: {partition.mountpoint}')
-            self.disk_partition_list.append(f'\tFile system type: {partition.fstype}')
+            if partition.device.find('loop') == -1:     # not display loop partitions
+                self.disk_partition_list.append(f'Device: {partition.device}')
+                self.disk_partition_list.append(f'\tMountpoint: {partition.mountpoint}')
+                self.disk_partition_list.append(f'\tFile system type: {partition.fstype}')
 
-            try:
-                partition_usage = psutil.disk_usage(partition.mountpoint)
-            except PermissionError:
-                continue
+                try:
+                    partition_usage = psutil.disk_usage(partition.mountpoint)
+                except PermissionError:
+                    continue
 
-            self.disk_partition_list.append(f'\tTotal Size part: {Common.convert_units(partition_usage.total)}')
-            self.disk_partition_list.append(f'\tUsed part: {Common.convert_units(partition_usage.used)}')
-            self.disk_partition_list.append(f'\tFree part: {Common.convert_units(partition_usage.free)}')
-            self.disk_partition_list.append(f'\tOccupancy part: {partition_usage.percent}%')
+                self.disk_partition_list.append(f'\tTotal Size part: {Common.convert_units(partition_usage.total)}')
+                self.disk_partition_list.append(f'\tUsed part: {Common.convert_units(partition_usage.used)}')
+                self.disk_partition_list.append(f'\tFree part: {Common.convert_units(partition_usage.free)}')
+                self.disk_partition_list.append(f'\tOccupancy part: {partition_usage.percent}%')
 
         print(Common.SEPARATOR)
         for partition in self.disk_partition_list:
@@ -236,8 +237,9 @@ class Network:
         self.bytes_send = f'Total bytes sent: {Common.convert_units(self.net_io.bytes_sent)}'
 
         for interface_name, interface_addresses in self.if_addrs.items():
+            self.interfaces.append(f'Interface: {interface_name}')
             for address in interface_addresses:
-                self.interfaces.append(f'Interface: {interface_name}')
+
                 if str(address.family) == 'AddressFamily.AF_INET':
                     self.interfaces.append(f'\tIP Address: {address.address}')
                     self.interfaces.append(f'\tIP Netmask: {address.netmask}')
@@ -286,7 +288,7 @@ class Battery:
         return self.is_below_threshold() and self.is_discharge_higher_delta()
 
     def is_below_threshold(self):
-        return self.params_obj.config_params['DISCHARGING_BATTERY'] <= self.get_percentage()
+        return self.params_obj.config_params['DISCHARGING_BATTERY'] >= self.get_percentage()
 
     def is_discharge_higher_delta(self):
         return self.params_obj.stats_params['BATTERY_STATUS'] - self.get_percentage() > self.params_obj.config_params['DELTA_BATTERY']
