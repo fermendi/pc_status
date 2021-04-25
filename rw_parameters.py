@@ -59,7 +59,8 @@ class ReadParametersFiles:
 
 
 class WriteParametersStatFile:
-    def write_parameters(self, dict_stat):
+    @staticmethod
+    def write_parameters(dict_stat):
         Common.write_dict_file(Common.STATS_FILE, dict_stat)
 
 

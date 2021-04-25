@@ -3,8 +3,8 @@
 #
 # @author Fernando Mendiburu - <fernando.mendiburu@ee.ufcg.edu.br>
 #
-
 import psutil
+import GPUtil
 import platform
 
 from common import Common
@@ -113,19 +113,12 @@ class CPU:
 
 class Memory:
     def __init__(self, params_obj):
-        self.svmem = psutil.virtual_memory()
-        self.swap = psutil.swap_memory()
         self.params_obj = params_obj
         self.update()
-        self.PERCENTAGE_MEM_SWAP = f'Memory Usage: {self.get_memory_usage()}% (Swap: {self.get_swap_usage()}%)'
 
     def update(self):
-        self.available_memory = self.svmem.total
-        self.used_memory = self.svmem.used
-        self.memory_percent = self.svmem.percent
-        self.available_memory_swap = self.swap.free
-        self.used_memory_swap = self.swap.used
-        self.memory_percent_swap = self.swap.percent
+        self.svmem = psutil.virtual_memory()
+        self.swap = psutil.swap_memory()
 
     def get_usage_msg(self):
         return f'Memory Usage: {self.get_memory_usage()}% (Swap: {self.get_swap_usage()}%)'
@@ -133,17 +126,17 @@ class Memory:
     def virtual_mem(self):
         print(Common.SEPARATOR)
         print(f'Memory: {Common.convert_units(self.svmem.total)}')
-        print(f'Available Memory: {Common.convert_units(self.available_memory)}')
-        print(f'Used Memory: {Common.convert_units(self.used_memory)}')
-        print(f'Memory Usage: {self.memory_percent}%')
+        print(f'Available Memory: {Common.convert_units(self.svmem.total)}')
+        print(f'Used Memory: {Common.convert_units(self.svmem.used)}')
+        print(f'Memory Usage: {self.svmem.percent}%')
         print(Common.SEPARATOR)
 
     def swap_mem(self):
         print(Common.SEPARATOR)
         print(f'Swap Memory: {Common.convert_units(self.swap.total)}')
-        print(f'Free Swap Memory: {Common.convert_units(self.available_memory_swap)}')
-        print(f'Used Swap Memory: {Common.convert_units(self.used_memory_swap)}')
-        print(f'Swap Memory Usage: {self.memory_percent_swap}%')
+        print(f'Free Swap Memory: {Common.convert_units(self.swap.free)}')
+        print(f'Used Swap Memory: {Common.convert_units(self.swap.used)}')
+        print(f'Swap Memory Usage: {self.swap.percent}%')
         print(Common.SEPARATOR)
 
     def is_high_usage(self):
@@ -153,10 +146,10 @@ class Memory:
             return False
 
     def get_memory_usage(self):
-        return self.memory_percent
+        return self.svmem.percent
 
     def get_swap_usage(self):
-        return self.memory_percent_swap
+        return self.swap.percent
 
     def get_mem_swap_msg(self):
         return f'Memory: {self.get_memory_usage()}% (swap: {self.get_swap_usage()}%)'
@@ -239,7 +232,6 @@ class Network:
         for interface_name, interface_addresses in self.if_addrs.items():
             self.interfaces.append(f'Interface: {interface_name}')
             for address in interface_addresses:
-
                 if str(address.family) == 'AddressFamily.AF_INET':
                     self.interfaces.append(f'\tIP Address: {address.address}')
                     self.interfaces.append(f'\tIP Netmask: {address.netmask}')
@@ -392,6 +384,64 @@ class Temperature:
 
     def set_parameters(self, params_obj):
         self.params_obj = params_obj
+
+    def run(self):
+        self.info()
+
+
+class GPU:
+    def __init__(self, params_obj):
+        self.params_obj = params_obj
+        self.gpus = GPUtil.getGPUs()
+
+    def update(self):
+        self.gpus = GPUtil.getGPUs()
+
+    def info(self):
+        print(Common.SEPARATOR)
+        for gpu in self.gpus:
+            print(f'GPU: {gpu.name} ({gpu.uuid})')
+            print(f'Load: {Common.get_percentage(gpu.load)}%')
+            print(f'Memory total: {gpu.memoryTotal}MB')
+            print(f'Memory used: {gpu.memoryUsed}MB')
+            print(f'Memory free: {gpu.memoryFree}MB')
+            print(f'Temperature: {gpu.temperature}°')
+        print(Common.SEPARATOR)
+
+    def get_gpu_string(self):
+        gpu_string = ''
+        for gpu in self.gpus:
+            gpu_string += f'{gpu.name} load: {Common.get_percentage(gpu.load)}%\n'
+        return Common.fix_string(gpu_string)
+
+    def is_notification_gpu(self):
+        return self.params_obj.config_params['NOTIFICATION_GPU'] == 'yes'
+
+    def set_parameters(self, params_obj):
+        self.params_obj = params_obj
+
+    def is_high_load(self):
+        return self.get_status() != 'OK'
+
+    def get_status(self):
+        self.device = ''
+        for gpu in self.gpus:
+            self.device = [[gpu.name, Common.get_percentage(gpu.load)]]
+            if Common.get_percentage(gpu.load) >= self.params_obj.config_params['HIGH_LOAD_GPU']:
+                return 'HIGH'
+        return 'OK'
+
+    def get_gpu_msg(self):
+        temp_msg = Common.generate_message(self.device, '%')
+        return temp_msg
+
+    def alarm(self, is_sound):
+        status = self.get_status()
+        gpu_msg = self.get_gpu_msg()
+        Common.notification_send('GPU',
+                                 f'Load is {status}! ({gpu_msg})',
+                                 self.params_obj.config_params,
+                                 is_sound)
 
     def run(self):
         self.info()

@@ -91,6 +91,10 @@ class Common:
     def write_dict_file(file, dict):
         Common.write_params(file, dict)
 
+    @staticmethod
+    def get_percentage(value):
+        return round(value * 100, 2)
+
 
 if __name__ == '__main__':
     pass

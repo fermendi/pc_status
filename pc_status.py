@@ -36,6 +36,8 @@ if __name__ == '__main__':
                     sensor.cpu.alarm(parser.is_sound())
                 if sensor.temperature.is_high_temperature() and sensor.temperature.is_notification_temperature():
                     sensor.temperature.alarm(parser.is_sound())
+                if sensor.gpu.is_high_load() and sensor.gpu.is_notification_gpu():
+                    sensor.gpu.alarm(parser.is_sound())
 
             if parser.is_full():
                 print(Common.SEPARATOR)
@@ -51,6 +53,8 @@ if __name__ == '__main__':
                 print(sensor.memory.get_mem_swap_msg())
                 print(sensor.battery.get_percentage_msg())
                 print(Common.SEPARATOR)
+                print(sensor.gpu.get_gpu_string())
+                print(Common.SEPARATOR)
 
             if not b_loop:
                 break
@@ -59,6 +63,7 @@ if __name__ == '__main__':
         dict_stats_params = {"BATTERY_STATUS": sensor.battery.get_percentage(),
                              "CPU_STATUS": sensor.cpu.get_cpu_usage(),
                              "MEMORY_STATUS": sensor.memory.get_memory_usage(),
+                             "GPU_STATUS": sensor.memory.get_memory_usage()
                              }
 
         write_obj.write_parameters(dict_stats_params)

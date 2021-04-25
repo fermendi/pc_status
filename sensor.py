@@ -4,7 +4,7 @@
 # @author Fernando Mendiburu - <fernando.mendiburu@ee.ufcg.edu.br>
 #
 
-from system import System, CPU, Memory, Disk, Network, Battery, Temperature
+from system import System, CPU, Memory, Disk, Network, Battery, Temperature, GPU
 
 
 class Sensor:
@@ -16,6 +16,7 @@ class Sensor:
         self.system = System(params_obj)
         self.disk = Disk(params_obj)
         self.network = Network(params_obj)
+        self.gpu = GPU(params_obj)
 
     def update(self):
         self.battery.update()
@@ -24,6 +25,7 @@ class Sensor:
         self.cpu.update()
         self.disk.update()
         self.network.update()
+        self.gpu.update()
 
     def set_parameters(self, params_obj):
         self.battery.set_parameters(params_obj)
@@ -33,6 +35,7 @@ class Sensor:
         self.system.set_parameters(params_obj)
         self.disk.set_parameters(params_obj)
         self.network.set_parameters(params_obj)
+        self.gpu.set_parameters(params_obj)
 
     def run(self):
         self.system.run()
@@ -42,6 +45,7 @@ class Sensor:
         self.network.run()
         self.battery.run()
         self.temperature.run()
+        self.gpu.run()
 
 
 if __name__ == '__main__':
