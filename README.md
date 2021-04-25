@@ -29,7 +29,7 @@ Battery percentage: 2.19%
 ```
 
 <p align="center">
-  <img src=".//gif/explosion.gif" alt="Size Limit CLI" width="200">
+  <img src=".//gif/explosion.gif" alt="Size Limit CLI" width="300">
 </p>
 
 
@@ -68,6 +68,14 @@ Module for sending native cross-platform notifications. More information [here](
 
 ```
 pip install notify-py
+```
+
+#### GPUtil
+
+Module for getting the GPU status from NVIDIA GPUs using `nvidia-smi`. For more information, please see [here](https://github.com/anderskm/gputil).
+
+```
+pip install gputil
 ```
 
 ## Cron
@@ -141,14 +149,17 @@ There are other constants to set in the file 'config.txt':
 
 `PATH_NOTIF_SOUND`: path to the sound of notification.
 
-`HIGH_USAGE_CPU`: CPU percentage (0-100%) that triggers the notification of high CPU usage.
+`HIGH_USAGE_CPU`: CPU percentage (0-100) that triggers the notification of high CPU usage.
 
-`HIGH_USAGE_MEM`: Memory percentage (0-100%) that triggers the notification of high memory usage.
+`HIGH_USAGE_MEM`: Memory percentage (0-100) that triggers the notification of high memory usage.
 
-`DISCHARGING_BATTERY`: Battery percentage (0-100%) that triggers the notification of battery discharging.
+`HIGH_LOAD_GPU`: Graphics card load percentage (0-100) that triggers the notification of high GPU usage.
 
+`DISCHARGING_BATTERY`: Battery percentage (0-100) that triggers the notification of battery discharging.
 
-Setting the `NOTIF` parameter to 'yes' you allow/ deny ALL the notifications (CPU, memory and battery), but you can desactivate / activate in isolation:
+`DELTA_BATTERY`: Difference (0-100) between the last and current battery percentage. Play with this value to avoid some battery notifications (ex. the battery is deschanging even the PC plugged).
+
+Setting the `NOTIF` parameter to 'yes' ('no') you allow (deny) ALL the notifications (CPU, memory, gpu and battery), but you can desactivate / activate in isolation:
 
 `NOTIFICATION_BATTERY`: Ativate (yes) or deactivate (no) the battery notification.
 
@@ -157,6 +168,8 @@ Setting the `NOTIF` parameter to 'yes' you allow/ deny ALL the notifications (CP
 `NOTIFICATION_CPU`: Ativate (yes) or deactivate (no) the high CPU usage notification.
 
 `NOTIFICATION_TEMPERATURE`: Ativate (yes) or deactivate (no) the high temperature notification.
+
+`NOTIFICATION_GPU`: Ativate (yes) or deactivate (no) the high load usage notification.
 
 ## TODO
 
